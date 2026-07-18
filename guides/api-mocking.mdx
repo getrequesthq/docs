@@ -1,0 +1,100 @@
+---
+title: Launch APIs without a backend
+description: Use GetRequest JSON endpoints to unblock frontend development before your backend exists.
+---
+
+If your frontend team is blocked waiting on an API, GetRequest lets you stand up a realistic mock in under 60 seconds — no server, no code, no docker compose.
+
+## Create a JSON endpoint
+
+1. Open your project and click **New Endpoint**.
+2. Set the **Action** to `JSON`.
+3. Define the response body your frontend expects:
+
+```json
+{
+  "id": "usr_01HXYZ",
+  "email": "alice@example.com",
+  "plan": "pro",
+  "created_at": "2024-01-15T09:00:00Z"
+}
+```
+
+4. Click **Create**. The endpoint is live immediately at:
+
+```
+https://e.getrequest.io/{project_uri}/{your-slug}
+```
+
+Your frontend can start calling it right now. The response is returned in milliseconds with the status code `200`.
+
+---
+
+## Matching real API shape
+
+Make your mock response mirror what the real backend will return. This prevents breaking changes when you switch to the real implementation.
+
+For a paginated list endpoint, mock the envelope too:
+
+```json
+{
+  "data": [
+    { "id": "req_001", "method": "POST", "status": 200 },
+    { "id": "req_002", "method": "GET", "status": 404 }
+  ],
+  "meta": {
+    "next_cursor": "req_002",
+    "has_more": true
+  }
+}
+```
+
+---
+
+## Switch to your real backend — zero downtime
+
+When your backend is ready, edit the endpoint:
+
+1. Change **Action** from `JSON` to `Forward`.
+2. Set the **Destination URL** to your backend:
+
+```
+https://api.yourapp.com/v1/users/me
+```
+
+3. Save. All future requests are proxied to your backend — no changes needed in your frontend.
+
+<Note>
+  GetRequest forwards the original request headers and body verbatim. Your backend receives the exact same request the caller sent.
+</Note>
+
+---
+
+## Useful patterns
+
+**Different responses per environment**
+
+Create two endpoints with the same slug in separate projects — one project per environment (dev, staging). Point your frontend env vars at the right project URI.
+
+**Error state mocking**
+
+To simulate a 422 validation error, set the response body to match your error schema. Your frontend error handling will work against real error shapes before your backend ships:
+
+```json
+{
+  "message": "The email field is required.",
+  "errors": {
+    "email": ["The email field is required."]
+  }
+}
+```
+
+<Warning>
+  JSON endpoints always return HTTP `200`. If you need to test non-200 status codes, switch to a Forward endpoint pointed at a local server or a service like httpstat.us.
+</Warning>
+
+---
+
+## Every mock request is logged
+
+All requests to JSON endpoints are captured in Logs — so your frontend team can verify what they sent, and your backend team can see the shape of traffic before their code ships.

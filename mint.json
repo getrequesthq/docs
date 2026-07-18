@@ -1,0 +1,54 @@
+{
+  "$schema": "https://mintlify.com/schema.json",
+  "name": "GetRequest",
+  "logo": {
+    "light": "/logo/light.svg",
+    "dark": "/logo/dark.svg"
+  },
+  "favicon": "/favicon.svg",
+  "colors": {
+    "primary": "#0F172A",
+    "light": "#6366F1",
+    "dark": "#0F172A"
+  },
+  "topbarLinks": [
+    {
+      "name": "Dashboard",
+      "url": "https://getrequest.io/dashboard"
+    }
+  ],
+  "topbarCtaButton": {
+    "name": "Get started free",
+    "url": "https://getrequest.io/register"
+  },
+  "navigation": [
+    {
+      "group": "Get Started",
+      "pages": [
+        "introduction",
+        "quickstart"
+      ]
+    },
+    {
+      "group": "Guides",
+      "pages": [
+        "guides/api-mocking",
+        "guides/capture-webhooks",
+        "guides/traffic-spikes",
+        "guides/backend-downtime",
+        "guides/recover-failures",
+        "guides/share-evidence"
+      ]
+    },
+    {
+      "group": "More",
+      "pages": [
+        "faq"
+      ]
+    }
+  ],
+  "footerSocials": {
+    "x": "https://x.com/getrequestio",
+    "github": "https://github.com/getrequest"
+  }
+}

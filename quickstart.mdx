@@ -1,0 +1,142 @@
+---
+title: Getting Started
+description: Create an endpoint, send your first request, and verify it arrived — in under 2 minutes.
+---
+
+## Step 1: Create an endpoint
+
+1. Sign in to [getrequest.io](https://getrequest.io) and open your project.
+2. Click **New Endpoint**.
+3. Fill in the fields:
+
+| Field | Example | Notes |
+|-------|---------|-------|
+| Name | `User login` | Human-readable label |
+| Slug | `/auth/login` | Appended to your project URL |
+| Method | `POST` | GET, POST, PUT, PATCH, DELETE |
+| Action | `JSON` | Start with JSON for a mock response |
+
+4. Paste a sample JSON response body:
+
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiJ9...",
+  "user": { "id": 1, "email": "you@example.com" }
+}
+```
+
+5. Click **Create**. Your endpoint is live immediately.
+
+Your endpoint URL will look like this:
+
+```
+https://e.getrequest.io/ddfkU760XMs2z7te/auth/login
+```
+
+<Note>
+  Your project URI (`ddfkU760XMs2z7te` above) is unique to your project. Copy it from the project page.
+</Note>
+
+---
+
+## Step 2: Send your first request
+
+Grab your **API key** from [Settings → API Key](https://getrequest.io/settings) and send a request:
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://e.getrequest.io/{project_uri}/auth/login \
+  -H "x-api-key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"email": "you@example.com", "password": "secret"}'
+```
+
+```javascript JavaScript
+const response = await fetch('https://e.getrequest.io/{project_uri}/auth/login', {
+  method: 'POST',
+  headers: {
+    'x-api-key': 'YOUR_API_KEY',
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({ email: 'you@example.com', password: 'secret' }),
+});
+
+const data = await response.json();
+console.log(data);
+```
+
+```python Python
+import requests
+
+response = requests.post(
+    'https://e.getrequest.io/{project_uri}/auth/login',
+    headers={
+        'x-api-key': 'YOUR_API_KEY',
+        'Content-Type': 'application/json',
+    },
+    json={'email': 'you@example.com', 'password': 'secret'},
+)
+
+print(response.json())
+```
+
+```php PHP
+$client = new \GuzzleHttp\Client();
+
+$response = $client->post('https://e.getrequest.io/{project_uri}/auth/login', [
+    'headers' => [
+        'x-api-key' => 'YOUR_API_KEY',
+        'Content-Type' => 'application/json',
+    ],
+    'json' => ['email' => 'you@example.com', 'password' => 'secret'],
+]);
+
+echo $response->getBody();
+```
+
+</CodeGroup>
+
+You'll get back the JSON you configured:
+
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiJ9...",
+  "user": { "id": 1, "email": "you@example.com" }
+}
+```
+
+---
+
+## Step 3: Verify the request arrived
+
+Open your project in the dashboard and click **Logs**.
+
+You'll see the request you just sent — method, status, path, and duration. Click the row to inspect:
+
+- **Request** — full headers, query params, and body
+- **Response** — status code, headers, and body
+- **Timing** — how long it took end to end
+
+<Tip>
+  On Pro, you can click **Share** on any log entry to generate a public link — useful for bug reports and team debugging.
+</Tip>
+
+---
+
+## What's next
+
+<CardGroup cols={2}>
+  <Card title="Forward to your backend" icon="arrow-up-right-from-square" href="/guides/backend-downtime">
+    Switch from JSON mock to a real upstream URL.
+  </Card>
+  <Card title="Capture webhooks" icon="webhook" href="/guides/capture-webhooks">
+    Point Stripe, GitHub, or any provider at GetRequest.
+  </Card>
+  <Card title="Recover from failures" icon="rotate-right" href="/guides/recover-failures">
+    Replay any captured request after an outage.
+  </Card>
+  <Card title="Share incident evidence" icon="link" href="/guides/share-evidence">
+    Generate a public link to any request/response pair.
+  </Card>
+</CardGroup>

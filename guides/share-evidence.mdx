@@ -1,0 +1,77 @@
+---
+title: Share incident evidence across teams
+description: Generate a public link to any captured request and response — no login required to view.
+---
+
+<Note>
+  Shareable links require the **Pro plan**.
+</Note>
+
+When something breaks in production, debugging slows down because evidence lives in multiple places — backend logs, Slack threads, Jira comments. GetRequest lets you link directly to the exact request and response that caused an issue, viewable by anyone without an account.
+
+## Generate a shareable link
+
+<Steps>
+  <Step title="Open the log entry">
+    Find the request in **Logs** and click the row to open the detail view.
+  </Step>
+  <Step title="Click Share">
+    Click the **Share** button. GetRequest generates a unique public URL.
+  </Step>
+  <Step title="Copy and paste">
+    Copy the link and paste it anywhere — Slack, GitHub, Jira, Notion, email.
+  </Step>
+</Steps>
+
+The link looks like:
+
+```
+https://getrequest.io/s/abc123xyz
+```
+
+---
+
+## What the recipient sees
+
+Anyone who opens the link sees a read-only view of:
+
+- **Request** — method, path, headers, query parameters, body
+- **Response** — status code, headers, body
+- **Timing** — how long the request took
+- **Shared at** — when the link was created
+- **Expires at** — when the link will stop working
+
+No account. No login. No permissions to set up.
+
+---
+
+## Link expiry
+
+Shareable links expire automatically **30 days** after creation. After expiry, the link returns a 404 and the shared content is no longer accessible.
+
+If you need to stop sharing a link before it expires, open the log entry and click **Revoke**. The link becomes invalid immediately.
+
+---
+
+## When to use shareable links
+
+**Bug reports** — Attach the link to a GitHub issue or Jira ticket. The engineer picking it up sees the exact request shape without needing access to your dashboard.
+
+**Customer support** — A customer reports an error. Share the link with your support team so they can see what the customer actually sent and what your backend returned.
+
+**Cross-team debugging** — Your frontend team says the API is broken. Your backend team says it's fine. Share the log entry — both teams see the same data, not competing narratives.
+
+**Postmortems** — Attach the specific failing request to your incident report. The evidence is immutable and timestamped.
+
+**Code review** — Paste the link in a PR comment to show the actual request/response that a change needs to handle.
+
+---
+
+## Link limits
+
+| Limit | Value |
+|-------|-------|
+| Links generated per minute | 30 |
+| Link lifetime | 30 days |
+| Account required to view | No |
+| Account required to revoke | Yes (Pro) |

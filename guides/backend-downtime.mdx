@@ -1,0 +1,82 @@
+---
+title: Handle backend downtime
+description: Understand what GetRequest captures during an outage and how to pick up where you left off.
+---
+
+When your backend goes down, requests don't disappear — GetRequest captures them. You have a complete record of everything that came in while your backend was unavailable.
+
+## What happens during an outage
+
+With a **Forward** endpoint, GetRequest attempts to proxy every incoming request to your upstream. If your backend is unreachable or returns an error:
+
+1. GetRequest captures the full incoming request (headers, body, method, path).
+2. GetRequest records the upstream response — including `5xx` errors, timeouts, and connection failures.
+3. The caller receives the upstream error status directly.
+4. The log entry is saved with the failure details.
+
+Nothing is silently dropped. Every request that reached GetRequest during the outage is in your Logs.
+
+---
+
+## The 3-second timeout
+
+Forward endpoints wait up to **3 seconds** for your upstream to respond. If your backend takes longer — or doesn't respond at all — GetRequest returns:
+
+```
+HTTP 504 Gateway Timeout
+```
+
+The full request is still logged. Use the log entry to replay it once your backend recovers.
+
+<Note>
+  The 3-second limit applies to the upstream connection and response. GetRequest's own overhead is well under 5ms.
+</Note>
+
+---
+
+## Identify what failed
+
+Open **Logs** and filter by status code to find everything that failed during the incident:
+
+1. Set the **Status** filter to `5xx` or `504`.
+2. Set the **Time range** to the incident window.
+3. Click any row to see the full request — what the caller sent, what your backend returned (or failed to return), and how long it took.
+
+This gives you an exact record of impact: how many requests failed, which endpoints were affected, and the precise time window.
+
+---
+
+## What to do next
+
+Once your backend is back up:
+
+<Steps>
+  <Step title="Confirm recovery">
+    Send a test request to your endpoint and verify you get a `2xx` response.
+  </Step>
+  <Step title="Find failed requests">
+    Filter Logs by `5xx` and `504` for the incident window.
+  </Step>
+  <Step title="Replay each one">
+    Open each failed log entry and click **Replay** (Pro). GetRequest re-fires the exact request to your backend.
+  </Step>
+  <Step title="Verify the response">
+    Confirm each replay returns `2xx`. The new response is shown immediately in the log detail.
+  </Step>
+</Steps>
+
+See [Recover from production failures](/guides/recover-failures) for a detailed replay walkthrough.
+
+---
+
+## Switching to JSON mode during maintenance
+
+If you're taking your backend down intentionally (planned maintenance, deploy), switch affected endpoints to `JSON` mode first:
+
+1. Edit the endpoint and change **Action** to `JSON`.
+2. Set a meaningful response body — a maintenance message or a cached last-known-good response.
+3. Callers receive the JSON immediately instead of a 504.
+4. All requests are still logged.
+5. When your backend is back, switch back to `Forward` and replay anything that came in.
+
+This eliminates 504s from planned downtime entirely.

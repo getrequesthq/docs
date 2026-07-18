@@ -1,0 +1,78 @@
+---
+title: Protect against traffic spikes
+description: Understand how GetRequest quota enforcement works and what happens when you exceed your limit.
+---
+
+GetRequest enforces request quotas at the API Gateway level — before a request reaches your backend. This protects you from runaway traffic consuming your monthly allowance unexpectedly.
+
+## How quotas work
+
+Every GetRequest account is issued an **API key** tied to a usage plan. The plan defines how many requests you can make per month:
+
+| Plan | Monthly quota |
+|------|--------------|
+| Free | 10,000 |
+| Dev | 100,000 |
+| Pro | 1,000,000 |
+
+Quota is enforced by AWS API Gateway the moment a request arrives — before it hits your endpoints or your backend. If you've exhausted your quota, requests are rejected at the edge.
+
+---
+
+## What happens at the limit
+
+When your monthly quota is reached, GetRequest returns:
+
+```
+HTTP 429 Too Many Requests
+```
+
+No request is forwarded to your backend. No log entry is created. The caller receives the 429 directly from the API Gateway.
+
+<Note>
+  Quota resets on your billing anniversary date, not on the 1st of each month.
+</Note>
+
+---
+
+## Monitor your usage
+
+Check your current consumption in **Settings → Usage**:
+
+- **Requests used** — total for the current billing period
+- **Requests remaining** — how much quota is left
+- **Daily breakdown** — a chart of request volume by day so you can spot growth trends early
+
+Use this to predict when you'll hit your limit before it happens.
+
+---
+
+## Upgrade before you hit the wall
+
+If you're approaching your quota, upgrade your plan from **Settings → Subscription**. The new quota takes effect immediately — mid-period upgrades are prorated.
+
+<Tip>
+  Watch for a spike in daily volume that's 2–3× your normal baseline. That's usually a sign of a retry loop, a misconfigured client, or a load test hitting your endpoints.
+</Tip>
+
+---
+
+## Per-endpoint traffic visibility
+
+The Logs view shows every request by endpoint slug. If a spike is happening, you can filter by endpoint to identify which one is driving the volume — and whether it's legitimate traffic or noise.
+
+Use the **method** and **status** filters together to find automated retries: a flood of identical POST requests with 4xx responses is a common pattern.
+
+---
+
+## Rate limits on dashboard actions
+
+In addition to request quotas, a few dashboard actions have their own rate limits:
+
+| Action | Limit |
+|--------|-------|
+| API key regeneration | 6 per hour |
+| Shareable link generation | 30 per minute |
+| Request replay | 20 per minute |
+
+These are per-user limits and reset automatically.
