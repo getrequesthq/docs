@@ -13,12 +13,12 @@
   },
   "topbarLinks": [
     {
-      "name": "Dashboard",
-      "url": "https://app.getrequest.io"
+      "name": "Login",
+      "url": "https://app.getrequest.io/login"
     }
   ],
   "topbarCtaButton": {
-    "name": "Get started free",
+    "name": "Get Started",
     "url": "https://app.getrequest.io/register"
   },
   "navigation": [
