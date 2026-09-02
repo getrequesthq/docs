@@ -1,9 +1,9 @@
 ---
 title: Capture and inspect webhooks
-description: Point any webhook provider at GetRequest to capture, inspect, and replay every event.
+description: Point any webhook provider at getrequest to capture, inspect, and replay every event.
 ---
 
-Debugging webhooks is painful. Providers fire them once, your local machine is offline, and you're left guessing at the payload. GetRequest gives you a permanent capture URL you can hand to any provider.
+Debugging webhooks is painful. Providers fire them once, your local machine is offline, and you're left guessing at the payload. getrequest gives you a permanent capture URL you can hand to any provider.
 
 ## Create a webhook endpoint
 
@@ -26,15 +26,15 @@ https://e.getrequest.io/{project_uri}/webhooks/stripe
   <Tab title="Stripe">
     1. Go to [Stripe Dashboard → Webhooks](https://dashboard.stripe.com/webhooks).
     2. Click **Add endpoint**.
-    3. Paste your GetRequest URL.
+    3. Paste your getrequest URL.
     4. Select the events to listen for (e.g. `payment_intent.succeeded`).
     5. Click **Add endpoint**.
 
-    Stripe will immediately send a test event. Open GetRequest Logs to see it.
+    Stripe will immediately send a test event. Open getrequest Logs to see it.
   </Tab>
   <Tab title="GitHub">
     1. Go to your repository → **Settings → Webhooks → Add webhook**.
-    2. Set **Payload URL** to your GetRequest URL.
+    2. Set **Payload URL** to your getrequest URL.
     3. Set **Content type** to `application/json`.
     4. Choose which events to receive.
     5. Click **Add webhook**.
@@ -42,7 +42,7 @@ https://e.getrequest.io/{project_uri}/webhooks/stripe
     GitHub sends a `ping` event on creation — you'll see it in your logs within seconds.
   </Tab>
   <Tab title="Any provider">
-    Copy your GetRequest URL and paste it wherever the provider asks for a webhook endpoint. GetRequest accepts any HTTP method and any payload — JSON, form-encoded, or raw body.
+    Copy your getrequest URL and paste it wherever the provider asks for a webhook endpoint. getrequest accepts any HTTP method and any payload — JSON, form-encoded, or raw body.
   </Tab>
 </Tabs>
 
@@ -55,19 +55,19 @@ Open **Logs** in your project. Every webhook event appears as a row. Click any r
 - **Headers** — signature headers (`Stripe-Signature`, `X-Hub-Signature-256`), content type, and any custom metadata the provider sends
 - **Body** — the full JSON payload
 - **Response** — what your backend returned (status code and body)
-- **Duration** — round-trip time from GetRequest to your backend
+- **Duration** — round-trip time from getrequest to your backend
 
 This is everything you need to debug a failed webhook handler without triggering another event.
 
 ---
 
-## Replay a webhook (Pro)
+## Replay a webhook (Pro or Gro)
 
 Found a failed event? Replay it with one click without waiting for the provider to resend.
 
 1. Open the log entry.
 2. Click **Replay**.
-3. GetRequest re-fires the exact same request — same headers, same body — to your backend.
+3. getrequest re-fires the exact same request — same headers, same body — to your backend.
 4. The new response appears immediately.
 
 <Note>
@@ -78,10 +78,10 @@ Found a failed event? Replay it with one click without waiting for the provider 
 
 ## Verify webhook signatures
 
-GetRequest forwards all headers, including signature headers. Your backend receives the original `Stripe-Signature` or `X-Hub-Signature-256` unchanged, so signature verification works exactly as it would with a direct connection.
+getrequest forwards all headers, including signature headers. Your backend receives the original `Stripe-Signature` or `X-Hub-Signature-256` unchanged, so signature verification works exactly as it would with a direct connection.
 
 <Warning>
-  Do not share your GetRequest URL publicly if you are not verifying signatures. Anyone with the URL can send arbitrary payloads to your backend.
+  Do not share your getrequest URL publicly if you are not verifying signatures. Anyone with the URL can send arbitrary payloads to your backend.
 </Warning>
 
 ---

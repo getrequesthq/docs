@@ -4,10 +4,10 @@ description: Generate a public link to any captured request and response — no 
 ---
 
 <Note>
-  Shareable links require the **Pro plan**.
+  Shareable links require the **Pro** or **Gro** plan.
 </Note>
 
-When something breaks in production, debugging slows down because evidence lives in multiple places — backend logs, Slack threads, Jira comments. GetRequest lets you link directly to the exact request and response that caused an issue, viewable by anyone without an account.
+When something breaks in production, debugging slows down because evidence lives in multiple places — backend logs, Slack threads, Jira comments. getrequest lets you link directly to the exact request and response that caused an issue, viewable by anyone without an account.
 
 ## Generate a shareable link
 
@@ -16,7 +16,7 @@ When something breaks in production, debugging slows down because evidence lives
     Find the request in **Logs** and click the row to open the detail view.
   </Step>
   <Step title="Click Share">
-    Click the **Share** button. GetRequest generates a unique public URL.
+    Click the **Share** button. getrequest generates a unique public URL.
   </Step>
   <Step title="Copy and paste">
     Copy the link and paste it anywhere — Slack, GitHub, Jira, Notion, email.
@@ -26,7 +26,7 @@ When something breaks in production, debugging slows down because evidence lives
 The link looks like:
 
 ```
-https://getrequest.io/s/abc123xyz
+https://app.getrequest.io/s/abc123xyz
 ```
 
 ---
@@ -74,4 +74,4 @@ If you need to stop sharing a link before it expires, open the log entry and cli
 | Links generated per minute | 30 |
 | Link lifetime | 30 days |
 | Account required to view | No |
-| Account required to revoke | Yes (Pro) |
+| Account required to revoke | Yes (Pro or Gro) |

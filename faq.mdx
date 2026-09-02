@@ -1,6 +1,6 @@
 ---
 title: FAQ
-description: Common questions about GetRequest.
+description: Common questions about getrequest.
 ---
 
 <AccordionGroup>
@@ -13,28 +13,29 @@ description: Common questions about GetRequest.
     | Free | 7 days |
     | Dev | 30 days |
     | Pro | 30 days |
+    | Gro | 30 days |
 
     Logs older than your retention window are automatically deleted. Upgrade your plan before the window closes if you need to keep a specific log entry.
   </Accordion>
 
-  <Accordion title="Does GetRequest add latency to my API?">
-    For Forward endpoints, GetRequest adds less than 5ms of overhead per request. The 3-second upstream timeout is on your backend, not on GetRequest itself.
+  <Accordion title="Does getrequest add latency to my API?">
+    For Forward endpoints, getrequest adds less than 5ms of overhead per request. The 3-second upstream timeout is on your backend, not on getrequest itself.
 
     For JSON endpoints, there is no upstream call — the response is returned directly from edge infrastructure with sub-millisecond overhead.
   </Accordion>
 
   <Accordion title="What happens if my backend is slow or unresponsive?">
-    Forward endpoints wait up to **3 seconds** for your upstream to respond. If the upstream exceeds that, GetRequest returns `504 Gateway Timeout` to the caller. The request is still logged with the timeout noted, and you can replay it once your backend recovers.
+    Forward endpoints wait up to **3 seconds** for your upstream to respond. If the upstream exceeds that, getrequest returns `504 Gateway Timeout` to the caller. The request is still logged with the timeout noted, and you can replay it once your backend recovers.
   </Accordion>
 
   <Accordion title="Can I send binary payloads (images, files)?">
-    Yes. GetRequest forwards any request body, including binary data. Binary payloads are base64-encoded in storage. The maximum body size is **1 MiB**.
+    Yes. getrequest forwards any request body, including binary data. Binary payloads are base64-encoded in storage. The maximum body size is **1 MiB**.
   </Accordion>
 
   <Accordion title="Is my API key the same as my project URI?">
     No — these are different things.
 
-    - **API key** — authenticates you to GetRequest's API Gateway. Include it as the `x-api-key` header in every request. Found in **Settings → API Key**.
+    - **API key** — authenticates you to getrequest's API Gateway. Include it as the `x-api-key` header in every request. Found in **Settings → API Key**.
     - **Project URI** — part of your endpoint URL (e.g., `ddfkU760XMs2z7te`). It identifies which project a request belongs to. Found on your project page.
   </Accordion>
 
@@ -43,14 +44,14 @@ description: Common questions about GetRequest.
   </Accordion>
 
   <Accordion title="Can I replay requests on the Free or Dev plan?">
-    No. Request replay is a **Pro-only** feature. On Free and Dev plans, you can view and inspect all captured logs but cannot re-fire them.
+    No. Request replay requires **Pro or Gro**. On Free and Dev plans, you can view and inspect all captured logs but cannot re-fire them.
   </Accordion>
 
   <Accordion title="Do shareable links require the recipient to have an account?">
     No. Anyone with the link can view the request and response — no login, no account, no permissions. Links expire after 30 days or when you revoke them.
   </Accordion>
 
-  <Accordion title="Can I use GetRequest with multiple environments (dev, staging, prod)?">
+  <Accordion title="Can I use getrequest with multiple environments (dev, staging, prod)?">
     Yes. Create a separate **project** for each environment. Each project gets its own URI and its own set of endpoints. Your API key is shared across all projects.
   </Accordion>
 
@@ -64,8 +65,8 @@ description: Common questions about GetRequest.
     You can regenerate up to **6 times per hour**.
   </Accordion>
 
-  <Accordion title="Is GetRequest suitable for production traffic?">
-    Yes. Forward endpoints are used in production by teams that need full request visibility and replay capability. GetRequest is built on AWS API Gateway and Lambda, designed for high availability and low latency.
+  <Accordion title="Is getrequest suitable for production traffic?">
+    Yes. Forward endpoints are used in production by teams that need full request visibility and replay capability. getrequest is built on AWS API Gateway and Lambda, designed for high availability and low latency.
   </Accordion>
 
 </AccordionGroup>

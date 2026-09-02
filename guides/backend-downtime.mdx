@@ -1,26 +1,26 @@
 ---
 title: Handle backend downtime
-description: Understand what GetRequest captures during an outage and how to pick up where you left off.
+description: Understand what getrequest captures during an outage and how to pick up where you left off.
 ---
 
-When your backend goes down, requests don't disappear — GetRequest captures them. You have a complete record of everything that came in while your backend was unavailable.
+When your backend goes down, requests don't disappear — getrequest captures them. You have a complete record of everything that came in while your backend was unavailable.
 
 ## What happens during an outage
 
-With a **Forward** endpoint, GetRequest attempts to proxy every incoming request to your upstream. If your backend is unreachable or returns an error:
+With a **Forward** endpoint, getrequest attempts to proxy every incoming request to your upstream. If your backend is unreachable or returns an error:
 
-1. GetRequest captures the full incoming request (headers, body, method, path).
-2. GetRequest records the upstream response — including `5xx` errors, timeouts, and connection failures.
+1. getrequest captures the full incoming request (headers, body, method, path).
+2. getrequest records the upstream response — including `5xx` errors, timeouts, and connection failures.
 3. The caller receives the upstream error status directly.
 4. The log entry is saved with the failure details.
 
-Nothing is silently dropped. Every request that reached GetRequest during the outage is in your Logs.
+Nothing is silently dropped. Every request that reached getrequest during the outage is in your Logs.
 
 ---
 
 ## The 3-second timeout
 
-Forward endpoints wait up to **3 seconds** for your upstream to respond. If your backend takes longer — or doesn't respond at all — GetRequest returns:
+Forward endpoints wait up to **3 seconds** for your upstream to respond. If your backend takes longer — or doesn't respond at all — getrequest returns:
 
 ```
 HTTP 504 Gateway Timeout
@@ -29,7 +29,7 @@ HTTP 504 Gateway Timeout
 The full request is still logged. Use the log entry to replay it once your backend recovers.
 
 <Note>
-  The 3-second limit applies to the upstream connection and response. GetRequest's own overhead is well under 5ms.
+  The 3-second limit applies to the upstream connection and response. getrequest's own overhead is well under 5ms.
 </Note>
 
 ---
@@ -58,7 +58,7 @@ Once your backend is back up:
     Filter Logs by `5xx` and `504` for the incident window.
   </Step>
   <Step title="Replay each one">
-    Open each failed log entry and click **Replay** (Pro). GetRequest re-fires the exact request to your backend.
+    Open each failed log entry and click **Replay** (Pro or Gro). getrequest re-fires the exact request to your backend.
   </Step>
   <Step title="Verify the response">
     Confirm each replay returns `2xx`. The new response is shown immediately in the log detail.
