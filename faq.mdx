@@ -19,9 +19,9 @@ description: Common questions about getrequest.
   </Accordion>
 
   <Accordion title="Does getrequest add latency to my API?">
-    For Forward endpoints, getrequest adds less than 5ms of overhead per request. The 3-second upstream timeout is on your backend, not on getrequest itself.
+    For Forward endpoints, getrequest's own processing overhead is negligible — in practice, the latency you see is driven by your network path and the underlying AWS infrastructure, not by getrequest itself. The 3-second upstream timeout is on your backend, not on getrequest.
 
-    For JSON endpoints, there is no upstream call — the response is returned directly from edge infrastructure with sub-millisecond overhead.
+    For JSON endpoints, there is no upstream call — the response is returned directly from edge infrastructure, so overhead is minimal, though actual latency still depends on your network and the infrastructure it's hosted on.
   </Accordion>
 
   <Accordion title="What happens if my backend is slow or unresponsive?">
