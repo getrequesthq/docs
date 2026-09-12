@@ -3,34 +3,37 @@ title: Handle backend downtime
 description: Understand what getrequest captures during an outage and how to pick up where you left off.
 ---
 
-When your backend goes down, requests don't disappear — getrequest captures them. You have a complete record of everything that came in while your backend was unavailable.
+When your backend goes down, requests don't disappear — getrequest captures them. You have a complete record of everything that came in while your backend was unavailable, and a clear path to catching back up once it's over.
 
 ## What happens during an outage
 
-With a **Forward** endpoint, getrequest attempts to proxy every incoming request to your upstream. If your backend is unreachable or returns an error:
+With a **Sync API** endpoint, getrequest attempts to proxy every incoming request to your destination. If your backend is unreachable or returns an error:
 
 1. getrequest captures the full incoming request (headers, body, method, path).
-2. getrequest records the upstream response — including `5xx` errors, timeouts, and connection failures.
-3. The caller receives the upstream error status directly.
+2. getrequest records the destination's response — including `5xx` errors, timeouts, and connection failures.
+3. The caller receives the destination's error status directly.
 4. The log entry is saved with the failure details.
 
-Nothing is silently dropped. Every request that reached getrequest during the outage is in your Logs.
+Nothing is silently dropped. Every request that reached getrequest during the outage is in your Logs — which is exactly what makes catching up afterward possible.
 
 ---
 
-## The 3-second timeout
+## Timeout vs. unreachable — two different failures, two different codes
 
-Forward endpoints wait up to **3 seconds** for your upstream to respond. If your backend takes longer — or doesn't respond at all — getrequest returns:
+Sync API endpoints wait up to **3 seconds** for your destination to respond. What the caller gets back depends on *how* your backend failed:
 
-```
-HTTP 504 Gateway Timeout
-```
+- **Too slow** (your backend accepted the connection but never answered within 3 seconds) → `504 Gateway Timeout`
+- **Unreachable** (connection refused, DNS failure, TLS error — your backend never even accepted the connection) → `502 Bad Gateway`
 
-The full request is still logged. Use the log entry to replay it once your backend recovers.
+Either way, the full request is still logged with the failure recorded, ready to replay once your backend recovers.
 
 <Note>
-  The 3-second limit applies to the upstream connection and response. getrequest's own overhead is well under 5ms.
+  The 3-second limit applies to the destination's connection and response — it isn't watered down by getrequest's own processing, which is negligible compared to that window. See [Limits, timeouts & error responses](/guides/reference) for the exact error body of every status code getrequest can return.
 </Note>
+
+<Tip>
+  If the caller doesn't need to wait on the response at all — a webhook, an event notification — consider an **Async API** endpoint instead of Sync API. It retries automatically on a backoff schedule during an outage, so you may not need to do anything manually once your backend is back. See [Sync vs. Async endpoints](/guides/async-api).
+</Tip>
 
 ---
 
@@ -42,7 +45,7 @@ Open **Logs** and filter by status code to find everything that failed during th
 2. Set the **Time range** to the incident window.
 3. Click any row to see the full request — what the caller sent, what your backend returned (or failed to return), and how long it took.
 
-This gives you an exact record of impact: how many requests failed, which endpoints were affected, and the precise time window.
+This gives you an exact record of impact: how many requests failed, which endpoints were affected, and the precise time window — everything you need before you touch a single request.
 
 ---
 
@@ -58,25 +61,25 @@ Once your backend is back up:
     Filter Logs by `5xx` and `504` for the incident window.
   </Step>
   <Step title="Replay each one">
-    Open each failed log entry and click **Replay** (Pro or Gro). getrequest re-fires the exact request to your backend.
+    Open each failed log entry and click **Replay** (paid plans — see [FAQ](/faq)). getrequest re-fires the exact request to your backend.
   </Step>
   <Step title="Verify the response">
     Confirm each replay returns `2xx`. The new response is shown immediately in the log detail.
   </Step>
 </Steps>
 
-See [Recover from production failures](/guides/recover-failures) for a detailed replay walkthrough.
+That works well for a handful of requests. If the outage was long or the traffic was heavy, see [Recover from production failures](/guides/recover-failures) for the full replay walkthrough, and [Bulk retry & recovering many requests](/guides/bulk-retry) for recovering hundreds of them in one action instead of one at a time.
 
 ---
 
-## Switching to JSON mode during maintenance
+## Switching to Static API during maintenance
 
-If you're taking your backend down intentionally (planned maintenance, deploy), switch affected endpoints to `JSON` mode first:
+Not every outage is unplanned. If you're taking your backend down intentionally — maintenance, a deploy — you can avoid 504s altogether by switching the endpoint over first:
 
-1. Edit the endpoint and change **Action** to `JSON`.
+1. Edit the endpoint and change **Action** to `Static API`.
 2. Set a meaningful response body — a maintenance message or a cached last-known-good response.
-3. Callers receive the JSON immediately instead of a 504.
+3. Callers receive that response immediately instead of a 504.
 4. All requests are still logged.
-5. When your backend is back, switch back to `Forward` and replay anything that came in.
+5. When your backend is back, switch the Action back to `Sync API` (or `Async API`) and replay anything that came in during the window.
 
-This eliminates 504s from planned downtime entirely.
+This turns planned downtime into a non-event for your callers.

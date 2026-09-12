@@ -1,0 +1,93 @@
+---
+title: Sync vs. Async endpoints
+description: Choose between an immediate response and a queued, retried background delivery.
+---
+
+Every getrequest endpoint has an **Action** that controls how it handles a request. There are three:
+
+| Action | UI label | What it does |
+|--------|----------|--------------|
+| `forward` | **Sync API** | Proxies the request to your destination and returns its exact response, inline. |
+| `async_forward` | **Async API** | Acknowledges the caller immediately, then delivers to your destination in the background — with automatic retries. |
+| `json` | **Static API** | Returns a fixed JSON body you define. No upstream call. |
+
+Sync and Static API are covered in [Handle backend downtime](/guides/backend-downtime) and [Launch APIs without a backend](/guides/api-mocking). This guide covers **Async API** — when to use it, and exactly how delivery and retries work.
+
+## When to use Async API instead of Sync
+
+Sync API is a transparent, synchronous proxy: the caller waits while getrequest calls your destination and hands back its real response. That's the right model when the caller needs your actual response — a login request, a payment call, anything where the response body drives what happens next.
+
+Async API is built for the opposite case: **you don't need the caller to wait, and you don't want a slow or unavailable destination to become the caller's problem.** The classic example is a webhook — Stripe, GitHub, or any provider firing an event at you. The provider doesn't care what your backend returns; it just wants a fast acknowledgement so it doesn't mark the delivery as failed and retry on its own schedule.
+
+## What the caller gets back
+
+The moment an Async API endpoint receives a request, getrequest responds immediately:
+
+```
+HTTP 202 Accepted
+```
+```json
+{ "status": "Success", "request_id": "3f9c1e2a-..." }
+```
+
+Your destination is never in the caller's response path. Whatever your backend eventually returns has no bearing on what the original caller already received — even a `502` or a timeout on delivery attempt one is invisible to the caller, since they already got their `202` and moved on. (The one exception: if the endpoint has no destination URL configured at all, or an invalid one, the caller gets a `502` immediately — that's a configuration problem, not a delivery failure, so there's nothing to retry.)
+
+<Warning>
+  Async API request bodies are capped at **200 KiB** (`413` if exceeded) — smaller than Sync API's 1 MiB cap, since the payload has to fit through the delivery queue. That cap is measured on your original, decoded body — for **binary** payloads (which travel through the queue base64-encoded, inflating size by about a third), stay under roughly **180 KiB** in practice, since a binary body near the stated 200 KiB can fail to enqueue *after* you've already received a `202` — a silent failure, not a clean rejection. Text/JSON bodies aren't affected and are safe up to the full 200 KiB. See [Limits, timeouts & error responses](/guides/reference) for the exact math. If you're forwarding large or binary payloads, use Sync API instead.
+</Warning>
+
+See [Limits, timeouts & error responses](/guides/reference) for the exact status code and body of every response getrequest can return.
+
+## How delivery works
+
+After responding to the caller, getrequest queues the actual call to your destination and delivers it out of band:
+
+1. The first delivery attempt fires essentially immediately.
+2. getrequest waits up to **10 seconds** for your destination to respond (longer than Sync API's 3-second window, since nothing is waiting on it).
+3. If your destination responds with any `2xx`, delivery is marked **delivered** and stops.
+4. If it doesn't — timeout, connection error, or a non-2xx status — getrequest retries on a backoff schedule.
+
+### Retry schedule
+
+| Attempt | Delay before this attempt |
+|---------|---------------------------|
+| 1 | Immediate |
+| 2 | 15 seconds |
+| 3 | 60 seconds |
+| 4 | 5 minutes |
+| 5 | 15 minutes |
+| 6 (final) | 15 minutes |
+
+That's up to **6 attempts over roughly 36 minutes** before getrequest gives up and marks the delivery **failed**. Every attempt re-reads your endpoint's current destination and auth configuration — if you fix your handler or rotate a credential mid-retry, the next attempt uses the update, not a stale snapshot from the first attempt.
+
+### Delivery status
+
+Every request to an Async API endpoint is logged immediately with a `delivery_status` that updates as retries happen:
+
+| Status | Meaning |
+|--------|---------|
+| `pending` | Queued, first attempt not yet resolved |
+| `retrying` | At least one attempt failed; another is scheduled |
+| `delivered` | Your destination returned a `2xx` |
+| `failed` | All 6 attempts were exhausted without a `2xx` |
+
+Open the log entry to see every individual attempt — status returned, duration, and any error — the same per-attempt history bulk and manual retries use (see [Bulk retry & recovering many requests](/guides/bulk-retry)). A `failed` delivery is a normal candidate for a manual **Replay** once you've fixed whatever caused it — see [Recover from production failures](/guides/recover-failures).
+
+<Tip>
+  Async API's automatic retries and manual Replay are independent. Automatic retries stop once a delivery reaches `delivered` or exhausts all 6 attempts; Replay is always a separate, manual, one-off re-send you trigger yourself afterward.
+</Tip>
+
+## Sync, Async, and Static at a glance
+
+| | Sync API | Async API | Static API |
+|---|---|---|---|
+| Calls your destination | Yes, inline | Yes, in the background | No |
+| Caller waits for your response | Yes | No — gets `202` immediately | N/A |
+| Max request body | 1 MiB | 200 KiB (text) / ~180 KiB (binary, in practice) | 1 MiB |
+| Destination timeout | 3 seconds | 10 seconds per attempt | N/A |
+| Automatic retries | None | Up to 6 attempts, ~36 min | N/A |
+| Best for | Requests where the caller needs the real response | Webhooks and any fire-and-forget delivery | Mocking, frontend unblocking |
+
+You can switch an endpoint's action at any time with zero downtime — see [Handle backend downtime](/guides/backend-downtime) for switching Sync ⇄ Static during planned maintenance; the same edit works for Async.
+
+If you're not sure which one fits your endpoint, ask one question: does the caller need to see what your backend actually returns? If yes, use Sync. If no — it just needs to know you got it — use Async and let getrequest handle the rest.

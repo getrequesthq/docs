@@ -4,21 +4,21 @@ description: Replay any captured request to your backend after a failed deploy, 
 ---
 
 <Note>
-  Request replay requires the **Pro** or **Gro** plan.
+  Request replay requires a paid plan — see the [FAQ](/faq) for which ones.
 </Note>
 
 When something goes wrong in production, the hardest part isn't fixing the code — it's re-running all the requests that hit during the failure window. getrequest makes this a one-click operation.
 
 ## How replay works
 
-Replay re-fires the exact original request to your Forward endpoint's upstream:
+Replay re-fires the exact original request to your endpoint's destination — the same trip it originally tried to make, just later:
 
 - Same HTTP method
 - Same headers (including `Content-Type`, `Authorization`, and any custom headers)
 - Same query parameters
 - Same request body
 
-getrequest sends it fresh and shows you the new response immediately.
+getrequest sends it fresh and shows you the new response immediately. It works on **Sync API** and **Async API** endpoints — anywhere there's a destination to send it to.
 
 ---
 
@@ -46,7 +46,7 @@ getrequest sends it fresh and shows you the new response immediately.
 
 ## Replay multiple requests after an outage
 
-For an outage that affected many requests:
+For an outage that affected only a handful of requests, one-at-a-time Replay is fine:
 
 1. Filter Logs to the incident window and `5xx`/`504` statuses.
 2. Work through each row, replaying and confirming `2xx`.
@@ -56,13 +56,15 @@ For an outage that affected many requests:
   Filter by endpoint slug first if your outage was specific to one service. Replaying across multiple backends simultaneously increases the chance of re-triggering an issue before it's fully fixed.
 </Tip>
 
+For hundreds or thousands of affected requests, don't do this one row at a time — see [Bulk retry & recovering many requests](/guides/bulk-retry) for retrying a manual selection or an entire filtered set in one action, plus the **Retries** page that groups recurring failures for you automatically.
+
 ---
 
 ## What replay does not do
 
 - **Does not modify the original log.** The original request and response are preserved exactly as captured. The replay result appears as a separate response alongside the original.
-- **Does not retry automatically.** Replay is always manual and intentional — getrequest will never re-fire a request without you clicking the button.
-- **Does not work on JSON endpoints.** Replay requires a Forward endpoint with an upstream URL to send the request to.
+- **Does not retry automatically.** Replay is always manual and intentional — getrequest will never re-fire a request without you clicking the button. (Async API's own automatic retries are a separate thing — see [Sync vs. Async endpoints](/guides/async-api).)
+- **Does not work on Static API endpoints.** There's no destination to send a Static API request to, so there's nothing to replay.
 
 ---
 
@@ -71,8 +73,8 @@ For an outage that affected many requests:
 | Limit | Value |
 |-------|-------|
 | Requests per minute | 20 |
-| Endpoint type required | Forward |
-| Plan required | Pro or Gro |
+| Endpoint type required | Sync API or Async API |
+| Plan required | Paid — see [FAQ](/faq) |
 
 If you exceed 20 replays per minute, wait a moment and continue.
 
@@ -87,4 +89,4 @@ Failed deploys are the most common replay scenario. The typical recovery:
 3. Use the time range filter to find requests that hit during the broken window.
 4. Replay them in order.
 
-Because getrequest captures the exact timestamp of every request, you can reconstruct the precise sequence of events during the incident.
+Because getrequest captures the exact timestamp of every request, you can reconstruct the precise sequence of events during the incident — one deploy, fully undone.

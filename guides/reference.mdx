@@ -1,0 +1,75 @@
+---
+title: Limits, timeouts & error responses
+description: Every status code, timeout, size cap, and header rule getrequest applies — the nuts and bolts behind the guides.
+---
+
+The other guides explain *why* and *when*. This page is the *exactly what* — every number and every response shape getrequest can hand back, in one place, so nothing is left to guesswork.
+
+## Every response, in one table
+
+Every JSON error body getrequest returns has the same shape — `{ "error": "<message>" }` — with two exceptions noted below.
+
+| Status | When | Body |
+|--------|------|------|
+| `200` | Static API, always. Sync API, whatever your destination returned. | Static API: the fixed body you configured. Sync API: your destination's exact body, untouched. |
+| `202` | Async API accepted the request for background delivery. | `{ "status": "Success", "request_id": "<uuid>" }` |
+| `401` | Source **Authentication** failed (wrong or missing credential). | `{ "error": "Unauthorized" }` — request is still logged, tagged `source_auth_failed`. |
+| `404` | No endpoint matches this project URI + slug at all. | `{ "error": "Endpoint not found" }` |
+| `405` | An endpoint matches the slug, but not for this HTTP method. | `{ "error": "Method not allowed" }`, plus an `Allow` header listing the methods that *are* configured. |
+| `413` | Request body over the size cap for this endpoint's action. | `{ "error": "Request body exceeds the 1 MiB limit" }` (Sync/Static) or `{ "error": "Request body exceeds the 200 KiB limit for async forward" }` (Async) |
+| `429` | Quota exceeded — Free's hard cap, or a paid plan past its overage ceiling. | `{ "error": "Request quota exceeded for this billing period", "resets_at": "<ISO 8601 timestamp>" }` — the only error body with an extra field. Still logged. |
+| `502` | **Sync or Async**: the endpoint has no destination URL configured, or an invalid one — a configuration problem, checked before any delivery is attempted. **Sync only**: destination unreachable, connection refused, DNS failure, once a delivery attempt is actually made. | `{ "error": "Missing destination URL" }`, `{ "error": "Invalid destination URL" }`, or `{ "error": "Upstream request failed" }` depending on the cause. |
+| `504` | **Sync API only**: destination didn't respond within **3 seconds**. | `{ "error": "Upstream timeout" }` |
+
+Async API never returns `504` to the caller, and never returns `502` for a slow or failing *destination* either — that's exactly what its retry schedule exists to absorb instead. The one `502` Async API can still return is immediate and configuration-related (no destination URL set, or an invalid one), not a delivery failure. See [Sync vs. Async endpoints](/guides/async-api) for the retry schedule and delivery-status states.
+
+<Note>
+  `502` can also come from causes unrelated to your destination, on **any** action type: a Redis cache miss/error resolving the endpoint (`"Invalid cache payload"` or `"Cache unavailable"`) or an unexpected error inside the handler itself (`"Handler error"`). These are infrastructure-level failures, not something your destination or configuration caused.
+</Note>
+
+## Timeouts and size caps at a glance
+
+| | Sync API | Async API | Static API |
+|---|---|---|---|
+| Destination timeout | 3 seconds | 10 seconds, per attempt | N/A |
+| Max request body (text/JSON) | 1 MiB | 200 KiB | 1 MiB |
+| Max request body (binary) | 1 MiB | **~180 KiB in practice** — see below | 1 MiB |
+| On timeout/failure | `504`/`502` to the caller, immediately | Retried automatically, up to 6 attempts | N/A |
+
+The Async API cap is lower than Sync API's because the request body has to fit through the delivery queue (SQS) on the way to your destination, with headroom meant to be left for headers and metadata.
+
+<Warning>
+  **This headroom doesn't actually hold for binary payloads.** The 200 KiB check measures your *original, decoded* body size. But binary data travels through the queue base64-encoded, which inflates it by roughly a third — a 200 KiB (204,800-byte) binary body becomes about 266.7 KiB base64-encoded, which is already over SQS's own 250 KiB message ceiling before the rest of the delivery task (destination URL, headers, IDs) is even added. Once that ceiling is hit, the enqueue fails — but the caller has already received its `202`, so **the failure is silent**: the request is never delivered, its log entry stays at `delivery_status: pending` forever (nothing ever revisits it), and it never appears on the **Retries** page (which only shows `response_status >= 400` — this failure's caller-facing status is `202`). The practical safe ceiling for a **binary** payload is closer to **180 KiB**, not 200 KiB. This does not affect text/JSON bodies — they're sent as plain UTF-8, not base64, so they aren't inflated and the full 200 KiB is genuinely safe for those. If you need to send larger or binary payloads reliably, use Sync API instead.
+</Warning>
+
+## What actually gets forwarded to your destination
+
+Sync API and Async API don't forward every header verbatim. getrequest forwards:
+
+- A fixed allow-list: `Content-Type`, `Authorization`, `Accept`, `Accept-Language`, `Accept-Encoding`, `User-Agent`, `Cache-Control`, `If-None-Match`, `If-Modified-Since`, `X-Request-Id`
+- Any header starting with `X-` (case-insensitive) — this is how most custom and provider headers make it through, including `X-Hub-Signature-256`
+- Query string parameters, appended to the destination URL
+
+getrequest does **not** forward: hop-by-hop headers (`Connection`, `Keep-Alive`, `Transfer-Encoding`, `TE`, `Trailer`, `Upgrade`, `Proxy-Authenticate`, `Proxy-Authorization`, `Content-Length`), the `Host` header, or any header not on the allow-list and not `X`-prefixed.
+
+<Warning>
+  This is why `Stripe-Signature` doesn't reach your backend when forwarding — it isn't `X`-prefixed and isn't on the allow-list — while `X-Hub-Signature-256` (GitHub) does. See [Capture and inspect webhooks](/guides/capture-webhooks) for what to do about it. This only affects what your **destination** receives; the Logs view always shows the complete, original headers exactly as the caller sent them, regardless of this filtering.
+</Warning>
+
+On the way back, getrequest strips a handful of upstream response headers that would otherwise conflict with how the response body is already decoded (`Content-Encoding`, `Transfer-Encoding`, `Content-Length`, `Connection`) — everything else your destination returns passes through to the caller unchanged.
+
+## One endpoint, multiple methods
+
+An endpoint isn't limited to a single HTTP method. When you create or edit one, you choose from `GET`, `POST`, `PUT`, `PATCH`, `DELETE` — and you can select more than one. All selected methods share the same slug, action, destination, and authentication settings; getrequest just accepts any of them at that URL.
+
+## Authentication mechanics
+
+- All credential comparisons (Bearer, API Key, Basic Auth, HMAC) use a constant-time comparison — never a plain `==="` check — so response timing can't leak how much of a secret an attacker guessed correctly.
+- HMAC verification runs over the **raw request body bytes**, before any parsing — this matches how every major webhook provider computes its own signature, so pointing Authentication's HMAC type at a provider's documented header and secret works without any transformation on your side.
+- An unrecognized or misconfigured auth type fails closed (rejected), never open (allowed) — a broken auth configuration can never accidentally turn into no auth at all.
+
+Full field-by-field detail is in [Authenticate endpoints and destinations](/guides/authentication).
+
+## What happens if getrequest's own infrastructure hiccups
+
+Quota tracking depends on a fast cache getrequest maintains internally. If that cache is briefly unavailable or hasn't caught up yet, getrequest **fails open** — your request is allowed through rather than blocked. A quota-tracking hiccup on getrequest's side is never allowed to take down your real traffic; at worst, it means a request that should have counted against your quota didn't get blocked instantly, which self-corrects on the next successful check.

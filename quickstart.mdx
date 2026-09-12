@@ -3,7 +3,7 @@ title: Getting Started
 description: Create an endpoint, send your first request, and verify it arrived — in under 2 minutes.
 ---
 
-This walkthrough uses a payment webhook as the example — exactly the kind of request you can't afford to lose — but every step here works identically for any endpoint you create.
+Here's the fastest way to see what getrequest actually does: create an endpoint, send it a request, and watch that request make the round trip. This walkthrough uses a retail checkout call — a case where the caller needs your real response back — but every step here works identically for any endpoint you create.
 
 ## Step 1: Create an endpoint
 
@@ -13,25 +13,18 @@ This walkthrough uses a payment webhook as the example — exactly the kind of r
 
 | Field | Example | Notes |
 |-------|---------|-------|
-| Name | `Stripe payment webhook` | Human-readable label |
-| Slug | `/webhooks/stripe` | Appended to your project URL |
-| Method | `POST` | GET, POST, PUT, PATCH, DELETE |
-| Action | `JSON` | Start with JSON to capture the event without touching your backend yet |
+| Name | `Order checkout` | Human-readable label |
+| Slug | `/orders/checkout` | Appended to your project URL |
+| Method | `POST` | Choose one or more: GET, POST, PUT, PATCH, DELETE |
+| Action | `Sync API` | Proxies inline and returns your destination's exact response |
+| Destination URL | `https://postman-echo.com/post` | A public echo endpoint, so this walkthrough works without a backend of your own |
 
-4. Paste a sample response body — this stands in for whatever your backend would normally reply with once it's wired up:
-
-```json
-{
-  "received": true
-}
-```
-
-5. Click **Create**. Your endpoint is live immediately.
+4. Click **Create**. Your endpoint is live immediately.
 
 Your endpoint URL will look like this:
 
 ```
-https://e.getrequest.io/ddfkU760XMs2z7te/webhooks/stripe
+https://e.getrequest.io/ddfkU760XMs2z7te/orders/checkout
 ```
 
 <Note>
@@ -42,36 +35,30 @@ https://e.getrequest.io/ddfkU760XMs2z7te/webhooks/stripe
 
 ## Step 2: Send your first request
 
-Grab your **API key** from [Settings → API Key](https://app.getrequest.io/settings/api-key) and simulate a payment event arriving:
+Simulate a checkout request:
 
 <CodeGroup>
 
 ```bash cURL
-curl -X POST https://e.getrequest.io/{project_uri}/webhooks/stripe \
-  -H "x-api-key: YOUR_API_KEY" \
+curl -X POST https://e.getrequest.io/{project_uri}/orders/checkout \
   -H "Content-Type: application/json" \
   -d '{
-    "id": "evt_1Nx29mp2xJ9AbCd",
-    "type": "payment_intent.succeeded",
-    "data": {
-      "object": { "id": "pi_3Nx29mp2xJ9AbCd", "amount": 4999, "currency": "usd", "status": "succeeded" }
-    }
+    "order_id": "ord_8841",
+    "items": [{ "sku": "SKU-123", "qty": 2 }],
+    "total": 59.98
   }'
 ```
 
 ```javascript JavaScript
-const response = await fetch('https://e.getrequest.io/{project_uri}/webhooks/stripe', {
+const response = await fetch('https://e.getrequest.io/{project_uri}/orders/checkout', {
   method: 'POST',
   headers: {
-    'x-api-key': 'YOUR_API_KEY',
     'Content-Type': 'application/json',
   },
   body: JSON.stringify({
-    id: 'evt_1Nx29mp2xJ9AbCd',
-    type: 'payment_intent.succeeded',
-    data: {
-      object: { id: 'pi_3Nx29mp2xJ9AbCd', amount: 4999, currency: 'usd', status: 'succeeded' },
-    },
+    order_id: 'ord_8841',
+    items: [{ sku: 'SKU-123', qty: 2 }],
+    total: 59.98,
   }),
 });
 
@@ -83,17 +70,14 @@ console.log(data);
 import requests
 
 response = requests.post(
-    'https://e.getrequest.io/{project_uri}/webhooks/stripe',
+    'https://e.getrequest.io/{project_uri}/orders/checkout',
     headers={
-        'x-api-key': 'YOUR_API_KEY',
         'Content-Type': 'application/json',
     },
     json={
-        'id': 'evt_1Nx29mp2xJ9AbCd',
-        'type': 'payment_intent.succeeded',
-        'data': {
-            'object': {'id': 'pi_3Nx29mp2xJ9AbCd', 'amount': 4999, 'currency': 'usd', 'status': 'succeeded'},
-        },
+        'order_id': 'ord_8841',
+        'items': [{'sku': 'SKU-123', 'qty': 2}],
+        'total': 59.98,
     },
 )
 
@@ -103,17 +87,14 @@ print(response.json())
 ```php PHP
 $client = new \GuzzleHttp\Client();
 
-$response = $client->post('https://e.getrequest.io/{project_uri}/webhooks/stripe', [
+$response = $client->post('https://e.getrequest.io/{project_uri}/orders/checkout', [
     'headers' => [
-        'x-api-key' => 'YOUR_API_KEY',
         'Content-Type' => 'application/json',
     ],
     'json' => [
-        'id' => 'evt_1Nx29mp2xJ9AbCd',
-        'type' => 'payment_intent.succeeded',
-        'data' => [
-            'object' => ['id' => 'pi_3Nx29mp2xJ9AbCd', 'amount' => 4999, 'currency' => 'usd', 'status' => 'succeeded'],
-        ],
+        'order_id' => 'ord_8841',
+        'items' => [['sku' => 'SKU-123', 'qty' => 2]],
+        'total' => 59.98,
     ],
 ]);
 
@@ -122,13 +103,25 @@ echo $response->getBody();
 
 </CodeGroup>
 
-You'll get back the JSON you configured:
+Because this is a **Sync API** endpoint, you get back the destination's exact response — not something getrequest invents. `postman-echo.com` echoes whatever it received, so the response looks like this:
 
 ```json
 {
-  "received": true
+  "args": {},
+  "data": "",
+  "json": {
+    "order_id": "ord_8841",
+    "items": [{ "sku": "SKU-123", "qty": 2 }],
+    "total": 59.98
+  },
+  "headers": { "...": "..." },
+  "url": "https://postman-echo.com/post"
 }
 ```
+
+That `json` field is your original payload, sent back unchanged — proof that getrequest proxied it through untouched. Point the **Destination URL** at your own backend instead, and this same response would be whatever *your* backend returns.
+
+getrequest didn't just relay that request, though — it also kept a copy. That's what the next step shows you.
 
 ---
 
@@ -142,26 +135,38 @@ You'll see the request you just sent — method, status, path, and duration. Cli
 - **Response** — status code, headers, and body
 - **Timing** — how long it took end to end
 
-This is exactly what getrequest captures for every request it receives — a quick test like this one, or a real event from a payment provider. Nothing is dropped, even before your backend ever sees it.
+This is exactly what getrequest captures for every request it receives. Nothing is dropped, even before your backend ever sees it.
 
 <Tip>
-  On Pro and Gro, you can click **Share** on any log entry to generate a public link — useful for bug reports and team debugging.
+  On paid plans, you can click **Share** on any log entry to generate a public link — useful for bug reports and team debugging. See the [FAQ](/faq) for which plans.
 </Tip>
 
 ---
 
+You just sent a real request through getrequest, got your destination's exact response back, and watched the whole exchange land in Logs — no code, no config file, no redeploy. The next step is pointing this at your real backend instead of a public echo endpoint, and deciding how you want getrequest to behave when it gets there: wait for the response like you just did, hand it off in the background, or skip the backend entirely with a mock.
+
 ## What's next
 
-You just captured a webhook without touching your backend. The next step is putting getrequest in front of it for real.
-
 <CardGroup cols={2}>
-  <Card title="Forward to your backend" icon="arrow-up-right-from-square" href="/guides/backend-downtime">
-    Switch from JSON capture to forwarding at your real upstream URL — transparently, with zero downtime.
+  <Card title="Sync vs. Async endpoints" icon="bolt" href="/guides/async-api">
+    Choose an immediate response or a queued, retried background delivery.
+  </Card>
+  <Card title="Authenticate endpoints and destinations" icon="key" href="/guides/authentication">
+    Require credentials on incoming requests and attach them to outgoing calls.
+  </Card>
+  <Card title="Launch APIs without a backend" icon="flask" href="/guides/api-mocking">
+    Use Static API to mock a response before your backend exists.
   </Card>
   <Card title="Recover from failures" icon="rotate-right" href="/guides/recover-failures">
     Replay any captured request after an outage.
   </Card>
+  <Card title="Bulk retry many requests" icon="arrows-rotate" href="/guides/bulk-retry">
+    Retry a manual selection or an entire filtered set in one action.
+  </Card>
   <Card title="Share incident evidence" icon="link" href="/guides/share-evidence">
     Generate a public link to any request/response pair.
+  </Card>
+  <Card title="Limits, timeouts & error responses" icon="list-check" href="/guides/reference">
+    Every status code, timeout, and size cap getrequest applies, in one place.
   </Card>
 </CardGroup>

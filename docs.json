@@ -21,15 +21,20 @@
         "group": "Guides",
         "pages": [
           "guides/api-mocking",
+          "guides/async-api",
+          "guides/authentication",
+          "guides/capture-webhooks",
           "guides/traffic-spikes",
           "guides/backend-downtime",
           "guides/recover-failures",
+          "guides/bulk-retry",
           "guides/share-evidence"
         ]
       },
       {
         "group": "More",
         "pages": [
+          "guides/reference",
           "faq"
         ]
       }

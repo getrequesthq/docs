@@ -1,0 +1,53 @@
+---
+title: Authenticate endpoints and destinations
+description: Require credentials on incoming requests, and attach credentials to outgoing calls.
+---
+
+A public URL is only as safe as who's allowed to call it. getrequest gives every endpoint two, completely independent authentication slots so you control both directions of that call:
+
+- **Authentication** — verifies the *caller* hitting your getrequest endpoint URL, before getrequest does anything else with the request.
+- **Destination Authentication** — attaches a credential to the *outbound* call getrequest makes to your destination (Sync API and Async API only — Static API has no destination to call).
+
+<Warning>
+  **Read this before configuring either one.** Configured credentials are currently stored and displayed **in plaintext** — they appear unredacted in the endpoint settings shown on every captured log entry for that endpoint, exactly like any other configuration value. Unlike request/response headers (where sensitive header values are masked), auth secrets are not currently masked in the log detail view. Anyone on your team who can view a project's Logs in the dashboard can see them. (Shared, public log links do **not** expose this — that read-only view never includes endpoint settings, only the request/response itself.) Until this changes, treat getrequest endpoint auth secrets as visible to your whole team, and avoid reusing a production-critical secret here that you wouldn't want appearing in a teammate's screenshot.
+</Warning>
+
+## Authentication (verifying the caller)
+
+Set this to require a credential on every request before getrequest will process it — useful when your endpoint URL might leak (a Slack message, a shared log link, a support ticket) and you don't want it usable by anyone who finds it.
+
+Options, selected from a **Type** dropdown when editing the endpoint:
+
+| Type | Fields | How it's checked |
+|------|--------|-------------------|
+| `None` | — | No check (default) |
+| `Bearer Token` | Token | `Authorization: Bearer <token>` must match, constant-time compare |
+| `API Key` | Location (Header / Query Param), Name, Value | The named header or query param must match, constant-time compare |
+| `Basic Auth` | Username, Password | Standard HTTP Basic — decoded and compared, constant-time |
+| `HMAC` | Header Key, Signing Secret, and under **Advanced**: Algorithm (`SHA-256`/`SHA-1`), Encoding (`Base64`/`Hex`), Prefix (e.g. `sha256=`) | Recomputes the signature over the **raw request body** and compares it to the header you named |
+
+A request that fails this check gets `401 Unauthorized` and never reaches your destination — but it **is still logged** (tagged so you can tell a real auth failure apart from a misconfigured client), so you can audit who's probing your endpoint.
+
+<Tip>
+  HMAC here is the same mechanism most webhook providers (Stripe, GitHub) use to sign *their* payloads to you. If you're capturing a provider's webhook and want getrequest to reject anything not actually from that provider, set Authentication to HMAC with the provider's signing secret and the header they document (e.g. `Stripe-Signature`, `X-Hub-Signature-256`).
+</Tip>
+
+## Destination Authentication (authenticating to your backend)
+
+Set this when your destination itself requires a credential — an internal API that expects a bearer token, a partner API behind Basic Auth, or a receiver that verifies an HMAC signature on the way in.
+
+Same four types, applied to the *outbound* call instead:
+
+| Type | What getrequest attaches |
+|------|---------------------------|
+| `None` | Nothing — forwarded as-is |
+| `Bearer Token` | `Authorization: Bearer <token>` |
+| `API Key` | The configured header or query param |
+| `Basic Auth` | Standard `Authorization: Basic ...` |
+| `HMAC Signature` | Signs the outbound body and attaches the signature header — the reverse direction of Authentication's HMAC: here getrequest is the *signer*, proving to your destination that the request genuinely came from getrequest |
+
+Whichever type you configure, getrequest **strips any `Authorization` header the original caller sent** before attaching yours — the configured destination credential always wins and is never overridable by the caller.
+
+Destination Authentication applies identically whether the endpoint is Sync API or Async API, including every automatic retry attempt — see [Sync vs. Async endpoints](/guides/async-api). If you rotate a destination credential, the next retry attempt (or the next live request) picks up the new value; nothing is cached from an earlier attempt.
+
+Set up right, the two slots work together: Authentication decides who's allowed to hand you a request at all, Destination Authentication proves to your own backend that the request genuinely came through getrequest — and neither one requires a line of code on your side.

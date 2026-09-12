@@ -9,7 +9,10 @@ Debugging webhooks is painful. Providers fire them once, your local machine is o
 
 1. Open your project and click **New Endpoint**.
 2. Set the **Method** to `POST` (most webhook providers use POST).
-3. Set the **Action** to `Forward` and enter your backend handler URL — or use `JSON` to capture without forwarding anything.
+3. Set the **Action**:
+   - **Async API** — acknowledges the provider immediately (`202`) and delivers to your handler in the background, with automatic retries. This is the recommended mode for webhooks: providers expect a fast response and will retry *their* side if you're slow, so let getrequest absorb that instead of your handler. See [Sync vs. Async endpoints](/guides/async-api).
+   - **Sync API** — proxies inline and waits for your handler's response, if you need the provider to see your handler's actual reply.
+   - **Static API** — capture without forwarding anything yet (see below).
 4. Use a descriptive slug like `/webhooks/stripe` or `/webhooks/github`.
 
 Your webhook URL is ready:
@@ -61,7 +64,7 @@ This is everything you need to debug a failed webhook handler without triggering
 
 ---
 
-## Replay a webhook (Pro or Gro)
+## Replay a webhook (paid plans — see [FAQ](/faq))
 
 Found a failed event? Replay it with one click without waiting for the provider to resend.
 
@@ -70,24 +73,31 @@ Found a failed event? Replay it with one click without waiting for the provider 
 3. getrequest re-fires the exact same request — same headers, same body — to your backend.
 4. The new response appears immediately.
 
+If an outage caused many events to fail — not just one — see [Bulk retry & recovering many requests](/guides/bulk-retry) instead of replaying event by event.
+
 <Note>
-  Replay requires a **Forward** endpoint. JSON endpoints have no upstream to replay to.
+  Replay requires a **Sync API** or **Async API** endpoint. Static API endpoints have no destination to replay to.
 </Note>
 
 ---
 
 ## Verify webhook signatures
 
-getrequest forwards all headers, including signature headers. Your backend receives the original `Stripe-Signature` or `X-Hub-Signature-256` unchanged, so signature verification works exactly as it would with a direct connection.
+This is the one place forwarding behavior actually matters: getrequest does **not** forward every header to your backend unchanged. Only a fixed allow-list, plus anything starting with `X-`, makes it through — see [Limits, timeouts & error responses](/guides/reference) for the full list. That has a real consequence for signature headers:
+
+- `X-Hub-Signature-256` (GitHub) — starts with `X-`, forwarded fine. Your own verification code works exactly as it would with a direct connection.
+- `Stripe-Signature` (Stripe) — does **not** start with `X-` and isn't on the allow-list, so it is **stripped before reaching your backend**. Your own handler-side verification against `Stripe-Signature` will never see the header if you're forwarding through getrequest.
+
+For Stripe (or any provider whose signature header doesn't happen to start with `X-`), don't rely on your backend to verify it — have getrequest verify it instead, before the header ever gets dropped: set the endpoint's **Authentication** to `HMAC`, point it at the provider's signature header name, and supply the provider's signing secret. Requests with an invalid or missing signature get rejected with `401` before reaching your backend at all — see [Authenticate endpoints and destinations](/guides/authentication) for the exact fields.
 
 <Warning>
-  Do not share your getrequest URL publicly if you are not verifying signatures. Anyone with the URL can send arbitrary payloads to your backend.
+  If you don't configure Authentication, anyone with your getrequest URL can send arbitrary payloads to your backend — verify signatures either in getrequest (recommended, and required for headers like `Stripe-Signature` that don't get forwarded) or in your own handler.
 </Warning>
 
 ---
 
-## Use JSON mode to capture without forwarding
+## Use Static API to capture without forwarding
 
-If you want to capture webhook events without your backend receiving them — for example, during an outage or before your handler is built — switch the endpoint to `JSON` mode temporarily.
+If you want to capture webhook events without your backend receiving them — for example, during an outage or before your handler is built — switch the endpoint to **Static API** temporarily.
 
-Events are captured in Logs. When your handler is ready, switch back to `Forward` and replay the captured events.
+Events are captured in Logs. When your handler is ready, switch back to **Sync API** or **Async API** and replay the captured events (one at a time, or in bulk — see [Bulk retry & recovering many requests](/guides/bulk-retry)).

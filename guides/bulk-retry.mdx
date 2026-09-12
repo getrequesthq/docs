@@ -1,0 +1,75 @@
+---
+title: Bulk retry & recovering many requests
+description: Retry a manually selected batch, or sweep up everything matching a filter, instead of replaying one request at a time.
+---
+
+<Note>
+  Bulk retry requires a paid plan — the same gate as single-request [Replay](/guides/recover-failures). See the [FAQ](/faq) for which plans qualify.
+</Note>
+
+Single-request Replay ([Recover from production failures](/guides/recover-failures)) is a one-click, one-request tool. When an outage or bad deploy affects hundreds or thousands of requests, retrying them one at a time doesn't scale. getrequest has two bulk mechanisms for exactly that, plus a **Retries** page that groups recurring failures for you automatically.
+
+Both mechanisms only ever touch **Sync API** or **Async API** logs that have a resolvable destination — there's nothing to retry on a Static API endpoint.
+
+## Manual selection — retry specific requests
+
+Use this when you already know which requests you want to resend — you've filtered or eyeballed the exact rows in **Logs**.
+
+1. Open **Logs** and check the box on each row you want to retry (only Sync/Async rows are selectable).
+2. The panel header switches to show your selection count and a **Retry Selected** button.
+3. Click it — getrequest queues one delivery attempt per selected request immediately and shows a summary toast.
+
+Limits:
+
+| Limit | Value |
+|-------|-------|
+| Requests per selection | 100 |
+| Requests per minute | 10 |
+
+A request can be skipped instead of queued — you'll see why: it no longer exists, it isn't a Sync/Async request, it has no destination configured, or it failed to enqueue. Each queued retry gets exactly one delivery attempt and is tracked in that request's own attempt history, same as a single Replay.
+
+## Filter-based bulk retry — sweep up everything matching a filter
+
+Use this after an incident when you want "every failed request in this window," not a hand-picked list.
+
+1. In **Logs**, apply the filters that describe the incident — endpoint, response status (or statuses), error, and/or a date range.
+2. Click **Bulk Retry Matching Requests**. getrequest shows a live preview count first: *"This will queue N requests for one retry attempt each."*
+3. Click **Start Bulk Retry** to confirm.
+
+This runs as a tracked background job, not an immediate action — there's no size cap on how many requests it can sweep up. The job pages through matches and delivers at a steady **10 requests per second**, so it won't hammer your backend with a wall of simultaneous retries even if it's recovering from the same outage that caused the failures. A job's status moves through `pending` → `running` → `completed` (or `cancelled` if you stop it, or `failed_to_start` if it couldn't kick off).
+
+You can watch recent jobs — including their matched/queued/skipped counts — and **cancel** one in progress. Cancelling stops the job from starting further pages; retries it already queued from earlier pages still run.
+
+Limits:
+
+| Action | Rate limit |
+|--------|-----------|
+| Preview count | 30 per minute |
+| Start a bulk retry job | 5 per minute |
+| Cancel a job | 10 per minute |
+
+## The Retries page — auto-grouped failures
+
+The **Retries** page groups recent failures for you automatically, so you don't have to build a filter by hand after every incident. It looks back 7 days and groups failing requests (status `4xx`/`5xx`, Sync/Async endpoints only) by endpoint + status + error into cards — each showing how many requests are affected.
+
+From a group, you can:
+- **Retry the group** — a filter-based bulk retry scoped to exactly that endpoint/status/error combination.
+- **Resolve** — dismiss the group from view. This doesn't fix anything on your end; it just stops that specific combination from showing up again unless it recurs after you resolved it.
+
+Applying your own filter on this page (instead of browsing the auto-grouped cards) switches to a flat list of matching requests, capped at 100 shown at once — the underlying bulk retry job still sweeps up every match, not just the 100 displayed.
+
+## Choosing between the two
+
+| | Manual selection | Filter-based job |
+|---|---|---|
+| You know exactly which requests | Yes | Not required |
+| Size | Up to 100 at a time | Unbounded |
+| Runs | Immediately, synchronously | As a background job |
+| Pacing | All at once | Throttled to 10/sec |
+| Trackable/cancellable | No — fire and check Logs | Yes |
+
+<Tip>
+  If you're not sure how many requests a filter matches, that's exactly what the preview count is for — check it before committing to **Start Bulk Retry**.
+</Tip>
+
+Either way, the goal is the same: an outage shouldn't turn into a week of manually clicking Replay. Pick manual selection when you can see the damage, the job when you can't.

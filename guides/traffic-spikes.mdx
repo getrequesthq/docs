@@ -3,32 +3,25 @@ title: Protect against traffic spikes
 description: Understand how getrequest quota enforcement works and what happens when you exceed your limit.
 ---
 
-getrequest enforces request quotas at the API Gateway level — before a request reaches your backend. This protects you from runaway traffic consuming your monthly allowance unexpectedly.
+Every plan has a monthly request quota — see the [FAQ](/faq) for current limits. This protects you from runaway traffic consuming your monthly allowance unexpectedly.
 
 ## How quotas work
 
-Every getrequest account is issued an **API key** tied to a usage plan. The plan defines how many requests you can make per month:
+Free is a hard cap: once you hit it, further requests are blocked until the cycle resets or you upgrade. Paid plans allow metered overage past the included quota, up to a ceiling, before anything is blocked — see the [FAQ](/faq) for exactly how overage works.
 
-| Plan | Monthly quota |
-|------|--------------|
-| Free | 10,000 |
-| Dev | 100,000 |
-| Pro | 1,000,000 |
-| Gro | 5,000,000 |
-
-Quota is enforced by AWS API Gateway the moment a request arrives — before it hits your endpoints or your backend. If you've exhausted your quota, requests are rejected at the edge.
+Quota is enforced before your destination is ever called — a request that's over the limit never reaches your backend.
 
 ---
 
 ## What happens at the limit
 
-When your monthly quota is reached, getrequest returns:
+When a request would put you over your plan's limit, getrequest returns:
 
 ```
 HTTP 429 Too Many Requests
 ```
 
-No request is forwarded to your backend. No log entry is created. The caller receives the 429 directly from the API Gateway.
+The request never reaches your backend — but it **is still logged**, tagged so you can tell a quota block apart from any other failure and identify exactly what was blocked once you upgrade or the quota resets.
 
 <Note>
   Quota resets on your billing anniversary date, not on the 1st of each month.
@@ -72,8 +65,13 @@ In addition to request quotas, a few dashboard actions have their own rate limit
 
 | Action | Limit |
 |--------|-------|
-| API key regeneration | 6 per hour |
 | Shareable link generation | 30 per minute |
 | Request replay | 20 per minute |
+| Bulk retry (manual selection) | 10 per minute |
+| Bulk retry job preview count | 30 per minute |
+| Bulk retry job start | 5 per minute |
+| Bulk retry job cancel | 10 per minute |
 
-These are per-user limits and reset automatically.
+These are per-user limits and reset automatically. See [Bulk retry & recovering many requests](/guides/bulk-retry) for what each of these actions does.
+
+Between the quota, the usage dashboard, and per-endpoint filtering, you should never be surprised by a spike after the fact — you'll see it building in **Settings → Usage** before it ever turns into a 429.

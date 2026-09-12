@@ -1,14 +1,14 @@
 ---
 title: Launch APIs without a backend
-description: Use getrequest JSON endpoints to unblock frontend development before your backend exists.
+description: Use getrequest Static API endpoints to unblock frontend development before your backend exists.
 ---
 
 If your frontend team is blocked waiting on an API, getrequest lets you stand up a realistic mock in under 60 seconds — no server, no code, no docker compose.
 
-## Create a JSON endpoint
+## Create a Static API endpoint
 
 1. Open your project and click **New Endpoint**.
-2. Set the **Action** to `JSON`.
+2. Set the **Action** to `Static API`.
 3. Define the response body your frontend expects:
 
 ```json
@@ -26,13 +26,13 @@ If your frontend team is blocked waiting on an API, getrequest lets you stand up
 https://e.getrequest.io/{project_uri}/{your-slug}
 ```
 
-Your frontend can start calling it right now. The response is returned in milliseconds with the status code `200`.
+Your frontend can start calling it right now. The response is returned in milliseconds with the status code `200` — there's no backend behind this yet, so there's nothing to be slow or unavailable.
 
 ---
 
 ## Matching real API shape
 
-Make your mock response mirror what the real backend will return. This prevents breaking changes when you switch to the real implementation.
+A mock is only useful if it looks like the real thing. Make your response mirror what the real backend will eventually return, and you prevent a wave of breaking changes on the day you switch to it.
 
 For a paginated list endpoint, mock the envelope too:
 
@@ -53,19 +53,19 @@ For a paginated list endpoint, mock the envelope too:
 
 ## Switch to your real backend — zero downtime
 
-When your backend is ready, edit the endpoint:
+Once your backend exists, turning the mock into the real thing is a single edit — not a migration.
 
-1. Change **Action** from `JSON` to `Forward`.
+1. Change **Action** from `Static API` to `Sync API`.
 2. Set the **Destination URL** to your backend:
 
 ```
 https://api.yourapp.com/v1/users/me
 ```
 
-3. Save. All future requests are proxied to your backend — no changes needed in your frontend.
+3. Save. All future requests are proxied to your backend — no changes needed in your frontend. The URL your frontend has been calling all along doesn't change.
 
 <Note>
-  getrequest forwards the original request headers and body verbatim. Your backend receives the exact same request the caller sent.
+  getrequest forwards the original request body verbatim. Headers pass through a fixed allow-list (common headers plus anything `X`-prefixed) rather than every header unconditionally — see [Limits, timeouts & error responses](/guides/reference) for the exact list, and [Capture and inspect webhooks](/guides/capture-webhooks) for why that matters if you're relying on a provider's signature header.
 </Note>
 
 ---
@@ -90,11 +90,13 @@ To simulate a 422 validation error, set the response body to match your error sc
 ```
 
 <Warning>
-  JSON endpoints always return HTTP `200`. If you need to test non-200 status codes, switch to a Forward endpoint pointed at a local server or a service like httpstat.us.
+  Static API endpoints always return HTTP `200`. If you need to test non-200 status codes, switch to a Sync API endpoint pointed at a local server or a service like httpstat.us.
 </Warning>
 
 ---
 
 ## Every mock request is logged
 
-All requests to JSON endpoints are captured in Logs — so your frontend team can verify what they sent, and your backend team can see the shape of traffic before their code ships.
+You're not just unblocking your frontend team — you're building a record while you do it. All requests to Static API endpoints are captured in Logs, so your frontend team can verify what they sent, and your backend team can see the real shape of traffic before their code ships.
+
+That log is also how you know you're ready to switch: once the requests hitting your mock look exactly like what your real backend expects, flipping the Action is the only thing left to do.

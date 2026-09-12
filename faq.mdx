@@ -5,46 +5,57 @@ description: Common questions about getrequest.
 
 <AccordionGroup>
 
-  <Accordion title="How long are my requests stored?">
-    Log retention depends on your plan:
+  <Accordion title="What are the plan limits?">
+    Monthly request quota and log retention both depend on your plan:
 
-    | Plan | Retention |
-    |------|-----------|
-    | Free | 7 days |
-    | Dev | 30 days |
-    | Pro | 30 days |
-    | Gro | 30 days |
+    | Plan | Monthly quota | Retention |
+    |------|--------------|-----------|
+    | Free | 10,000 | 7 days |
+    | Dev | 100,000 | 30 days |
+    | Pro | 1,000,000 | 30 days |
+    | Gro | 5,000,000 | 30 days |
 
     Logs older than your retention window are automatically deleted. Upgrade your plan before the window closes if you need to keep a specific log entry.
   </Accordion>
 
   <Accordion title="Does getrequest add latency to my API?">
-    For Forward endpoints, getrequest's own processing overhead is negligible — in practice, the latency you see is driven by your network path and the underlying AWS infrastructure, not by getrequest itself. The 3-second upstream timeout is on your backend, not on getrequest.
+    For Sync API and Async API endpoints, getrequest's own processing overhead is negligible — in practice, the latency you see is driven by your network path and the underlying AWS infrastructure, not by getrequest itself. The destination timeout (3 seconds for Sync API, 10 seconds per attempt for Async API) is on your backend, not on getrequest.
 
-    For JSON endpoints, there is no upstream call — the response is returned directly from edge infrastructure, so overhead is minimal, though actual latency still depends on your network and the infrastructure it's hosted on.
+    For Static API endpoints, there is no destination call — the response is returned directly from edge infrastructure, so overhead is minimal, though actual latency still depends on your network and the infrastructure it's hosted on.
   </Accordion>
 
   <Accordion title="What happens if my backend is slow or unresponsive?">
-    Forward endpoints wait up to **3 seconds** for your upstream to respond. If the upstream exceeds that, getrequest returns `504 Gateway Timeout` to the caller. The request is still logged with the timeout noted, and you can replay it once your backend recovers.
+    Sync API endpoints wait up to **3 seconds** for your destination to respond. If it exceeds that, getrequest returns `504 Gateway Timeout` to the caller. The request is still logged with the timeout noted, and you can replay it once your backend recovers. Async API endpoints instead retry automatically — see [Sync vs. Async endpoints](/guides/async-api).
   </Accordion>
 
   <Accordion title="Can I send binary payloads (images, files)?">
-    Yes. getrequest forwards any request body, including binary data. Binary payloads are base64-encoded in storage. The maximum body size is **1 MiB**.
+    Yes. getrequest forwards any request body, including binary data. Binary payloads are base64-encoded in storage. The maximum body size is **1 MiB** for Sync API and Static API.
+
+    For Async API, the enforced cap is **200 KiB**, but that check measures your original (decoded) file size, not what it becomes once base64-encoded for the delivery queue — base64 inflates size by about a third. For a **binary** payload specifically, stay under roughly **180 KiB** to leave safe margin; right at 200 KiB, the request can be silently dropped after already returning `202` to the caller. See [Limits, timeouts & error responses](/guides/reference) for exactly why. Text/JSON payloads aren't affected by this — they aren't re-encoded, so the full 200 KiB is genuinely safe for those.
   </Accordion>
 
-  <Accordion title="Is my API key the same as my project URI?">
-    No — these are different things.
+  <Accordion title="What's the difference between Sync API and Async API?">
+    Sync API proxies inline and returns your destination's exact response to the caller. Async API acknowledges the caller immediately (`202`) and delivers to your destination in the background, retrying automatically up to 6 times over about 36 minutes if it fails. Async API is the better fit for webhooks and anything else where the caller doesn't need to wait on — or see — your actual response. Neither is plan-gated. See [Sync vs. Async endpoints](/guides/async-api).
+  </Accordion>
 
-    - **API key** — authenticates you to getrequest's API Gateway. Include it as the `x-api-key` header in every request. Found in **Settings → API Key**.
-    - **Project URI** — part of your endpoint URL (e.g., `ddfkU760XMs2z7te`). It identifies which project a request belongs to. Found on your project page.
+  <Accordion title="Can I require auth on my endpoint, or authenticate to my own backend?">
+    Yes, both. **Authentication** verifies the caller hitting your endpoint (Bearer, API Key, Basic Auth, or HMAC) before getrequest processes the request. **Destination Authentication** attaches a credential to the outbound call getrequest makes to your backend. Neither is plan-gated. See [Authenticate endpoints and destinations](/guides/authentication) — including an important note on how these secrets currently appear in captured logs.
   </Accordion>
 
   <Accordion title="What happens when I exceed my monthly quota?">
-    Requests that exceed your monthly quota are rejected at the API Gateway level with `HTTP 429 Too Many Requests`. They do not reach your backend and are not logged. Upgrade your plan to restore access immediately — mid-period upgrades are prorated.
+    On Free, further requests are blocked with `HTTP 429 Too Many Requests` until the cycle resets or you upgrade. On Dev, Pro, and Gro, you're not cut off at the quota — overage is billed automatically instead, up to a ceiling; only past that ceiling do requests start getting blocked. Either way, a blocked request is still logged so you can see exactly what was affected. Upgrade to restore full access immediately — mid-period upgrades are prorated.
   </Accordion>
 
   <Accordion title="Can I replay requests on the Free or Dev plan?">
     No. Request replay requires **Pro or Gro**. On Free and Dev plans, you can view and inspect all captured logs but cannot re-fire them.
+  </Accordion>
+
+  <Accordion title="Can I retry many failed requests at once instead of one at a time?">
+    Yes, two ways, both requiring **Pro or Gro**: select specific rows in Logs and click **Retry Selected** (up to 100 at once), or apply a filter and click **Bulk Retry Matching Requests** to sweep up everything matching it as a background job, with no size cap. The **Retries** page also auto-groups recurring failures so you don't have to build the filter yourself. See [Bulk retry & recovering many requests](/guides/bulk-retry).
+  </Accordion>
+
+  <Accordion title="Which plan do I need to create shareable links?">
+    **Pro or Gro** — the same plans that unlock request replay and bulk retry. Anyone can view a link once it's created, regardless of their own plan.
   </Accordion>
 
   <Accordion title="Do shareable links require the recipient to have an account?">
@@ -52,21 +63,15 @@ description: Common questions about getrequest.
   </Accordion>
 
   <Accordion title="Can I use getrequest with multiple environments (dev, staging, prod)?">
-    Yes. Create a separate **project** for each environment. Each project gets its own URI and its own set of endpoints. Your API key is shared across all projects.
+    Yes. Create a separate **project** for each environment. Each project gets its own URI and its own set of endpoints.
   </Accordion>
 
   <Accordion title="Can multiple team members access the same project?">
     Team access is coming soon. Currently, each account has its own projects and endpoints. Share log links with teammates in the meantime — they can view the full request and response without needing access to your account.
   </Accordion>
 
-  <Accordion title="How do I rotate my API key?">
-    Go to **Settings → API Key** and click **Regenerate**. Your old key is immediately invalidated. Update any clients using the old key before regenerating.
-
-    You can regenerate up to **6 times per hour**.
-  </Accordion>
-
   <Accordion title="Is getrequest suitable for production traffic?">
-    Yes. Forward endpoints are used in production by teams that need full request visibility and replay capability. getrequest is built on AWS API Gateway and Lambda, designed for high availability and low latency.
+    Yes. Sync API and Async API endpoints are used in production by teams that need full request visibility and replay capability. getrequest is built on AWS API Gateway and Lambda, designed for high availability and low latency.
   </Accordion>
 
 </AccordionGroup>
