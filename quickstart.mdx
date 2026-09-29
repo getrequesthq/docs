@@ -13,22 +13,21 @@ Here's the fastest way to see what getrequest actually does: create an endpoint,
 
 | Field | Example | Notes |
 |-------|---------|-------|
-| Name | `Order checkout` | Human-readable label |
-| Slug | `/orders/checkout` | Appended to your project URL |
+| Name | `Order checkout` | Human-readable label — for your own reference, not part of the URL |
 | Method | `POST` | Choose one or more: GET, POST, PUT, PATCH, DELETE |
 | Action | `Sync API` | Proxies inline and returns your destination's exact response |
 | Destination URL | `https://postman-echo.com/post` | A public echo endpoint, so this walkthrough works without a backend of your own |
 
-4. Click **Create**. Your endpoint is live immediately.
+4. Click **Create**. getrequest generates a unique, random ID for the endpoint and it's live immediately.
 
 Your endpoint URL will look like this:
 
 ```
-https://e.getrequest.io/ddfkU760XMs2z7te/orders/checkout
+https://e.getrequest.io/aB3dEf7gH9jK2mN4
 ```
 
 <Note>
-  Your project URI (`ddfkU760XMs2z7te` above) is unique to your project. Copy it from the project page.
+  That ID (`aB3dEf7gH9jK2mN4` above) is auto-generated, unique to this endpoint, and permanent — there's no separate project identifier or slug to configure. Copy the full URL from the endpoint page.
 </Note>
 
 ---
@@ -40,7 +39,7 @@ Simulate a checkout request:
 <CodeGroup>
 
 ```bash cURL
-curl -X POST https://e.getrequest.io/{project_uri}/orders/checkout \
+curl -X POST https://e.getrequest.io/aB3dEf7gH9jK2mN4 \
   -H "Content-Type: application/json" \
   -d '{
     "order_id": "ord_8841",
@@ -50,7 +49,7 @@ curl -X POST https://e.getrequest.io/{project_uri}/orders/checkout \
 ```
 
 ```javascript JavaScript
-const response = await fetch('https://e.getrequest.io/{project_uri}/orders/checkout', {
+const response = await fetch('https://e.getrequest.io/aB3dEf7gH9jK2mN4', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
@@ -70,7 +69,7 @@ console.log(data);
 import requests
 
 response = requests.post(
-    'https://e.getrequest.io/{project_uri}/orders/checkout',
+    'https://e.getrequest.io/aB3dEf7gH9jK2mN4',
     headers={
         'Content-Type': 'application/json',
     },
@@ -87,7 +86,7 @@ print(response.json())
 ```php PHP
 $client = new \GuzzleHttp\Client();
 
-$response = $client->post('https://e.getrequest.io/{project_uri}/orders/checkout', [
+$response = $client->post('https://e.getrequest.io/aB3dEf7gH9jK2mN4', [
     'headers' => [
         'Content-Type' => 'application/json',
     ],

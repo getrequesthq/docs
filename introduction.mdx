@@ -30,10 +30,10 @@ That's the pitch. Here's how it actually works.
 
 ## How it works
 
-You create an **endpoint** in getrequest — no code, no deploy. getrequest gives you a URL:
+You create an **endpoint** in getrequest — no code, no deploy. getrequest gives you a URL with a unique, auto-generated ID:
 
 ```
-https://e.getrequest.io/{project_uri}/{your-slug}
+https://e.getrequest.io/{unique_id}
 ```
 
 Point your callers at that URL, and getrequest starts capturing every request that arrives — before it decides what to do with it. What it does next is up to you.

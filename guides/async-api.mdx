@@ -60,18 +60,23 @@ After responding to the caller, getrequest queues the actual call to your destin
 
 That's up to **6 attempts over roughly 36 minutes** before getrequest gives up and marks the delivery **failed**. Every attempt re-reads your endpoint's current destination and auth configuration — if you fix your handler or rotate a credential mid-retry, the next attempt uses the update, not a stale snapshot from the first attempt.
 
+There's one way out of that schedule besides success or exhaustion: if you delete the endpoint — or its whole project — while a delivery is still retrying, getrequest detects that immediately and stops rather than continuing to retry against something that no longer exists. That delivery is marked `failed` with `error: "Endpoint deleted"`.
+
 ### Delivery status
 
-Every request to an Async API endpoint is logged immediately with a `delivery_status` that updates as retries happen:
+<Note>
+  The log entry for a request isn't created until its **first delivery attempt has actually resolved** — not at the moment the caller got their `202`. In practice that's usually near-instant, but it can be up to the full 10-second destination timeout if your destination is slow to respond. When the entry does appear, it already carries that attempt's real outcome — it doesn't start from an empty placeholder.
+</Note>
+
+From there, `delivery_status` updates as further attempts happen:
 
 | Status | Meaning |
 |--------|---------|
-| `pending` | Queued, first attempt not yet resolved |
-| `retrying` | At least one attempt failed; another is scheduled |
+| `retrying` | The first (or a later) attempt failed; another is scheduled |
 | `delivered` | Your destination returned a `2xx` |
-| `failed` | All 6 attempts were exhausted without a `2xx` |
+| `failed` | All 6 attempts were exhausted without a `2xx` — or the endpoint was deleted mid-retry |
 
-Open the log entry to see every individual attempt — status returned, duration, and any error — the same per-attempt history bulk and manual retries use (see [Bulk retry & recovering many requests](/guides/bulk-retry)). A `failed` delivery is a normal candidate for a manual **Replay** once you've fixed whatever caused it — see [Recover from production failures](/guides/recover-failures).
+Open the log entry to see every individual attempt — status returned, duration, and any error — the same per-attempt history bulk and manual retries use (see [Bulk retry & recovering many requests](/guides/bulk-retry)). A `failed` delivery (from exhausted retries) is a normal candidate for a manual **Replay** once you've fixed whatever caused it — see [Recover from production failures](/guides/recover-failures).
 
 <Tip>
   Async API's automatic retries and manual Replay are independent. Automatic retries stop once a delivery reaches `delivered` or exhausts all 6 attempts; Replay is always a separate, manual, one-off re-send you trigger yourself afterward.

@@ -13,12 +13,12 @@ Debugging webhooks is painful. Providers fire them once, your local machine is o
    - **Async API** — acknowledges the provider immediately (`202`) and delivers to your handler in the background, with automatic retries. This is the recommended mode for webhooks: providers expect a fast response and will retry *their* side if you're slow, so let getrequest absorb that instead of your handler. See [Sync vs. Async endpoints](/guides/async-api).
    - **Sync API** — proxies inline and waits for your handler's response, if you need the provider to see your handler's actual reply.
    - **Static API** — capture without forwarding anything yet (see below).
-4. Use a descriptive slug like `/webhooks/stripe` or `/webhooks/github`.
+4. Give it a descriptive **Name** like `Stripe webhook` or `GitHub webhook` — this is just a label for your own reference; it doesn't appear in the URL.
 
-Your webhook URL is ready:
+Click **Create** and your webhook URL is ready immediately, with a unique, auto-generated ID:
 
 ```
-https://e.getrequest.io/{project_uri}/webhooks/stripe
+https://e.getrequest.io/{unique_id}
 ```
 
 ---

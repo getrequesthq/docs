@@ -20,10 +20,10 @@ If your frontend team is blocked waiting on an API, getrequest lets you stand up
 }
 ```
 
-4. Click **Create**. The endpoint is live immediately at:
+4. Click **Create**. The endpoint is live immediately at a unique, auto-generated URL:
 
 ```
-https://e.getrequest.io/{project_uri}/{your-slug}
+https://e.getrequest.io/{unique_id}
 ```
 
 Your frontend can start calling it right now. The response is returned in milliseconds with the status code `200` — there's no backend behind this yet, so there's nothing to be slow or unavailable.
@@ -74,7 +74,7 @@ https://api.yourapp.com/v1/users/me
 
 **Different responses per environment**
 
-Create two endpoints with the same slug in separate projects — one project per environment (dev, staging). Point your frontend env vars at the right project URI.
+Create a separate endpoint for each environment (dev, staging) — each one gets its own unique URL, so there's no naming collision to manage. Point each environment's frontend env var at that environment's specific endpoint URL.
 
 **Error state mocking**
 

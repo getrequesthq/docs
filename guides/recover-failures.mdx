@@ -53,7 +53,7 @@ For an outage that affected only a handful of requests, one-at-a-time Replay is 
 3. If you see a pattern of the same endpoint failing, check your backend logs for that specific handler before replaying the rest.
 
 <Tip>
-  Filter by endpoint slug first if your outage was specific to one service. Replaying across multiple backends simultaneously increases the chance of re-triggering an issue before it's fully fixed.
+  Filter by endpoint first if your outage was specific to one service. Replaying across multiple backends simultaneously increases the chance of re-triggering an issue before it's fully fixed.
 </Tip>
 
 For hundreds or thousands of affected requests, don't do this one row at a time — see [Bulk retry & recovering many requests](/guides/bulk-retry) for retrying a manual selection or an entire filtered set in one action, plus the **Retries** page that groups recurring failures for you automatically.
