@@ -65,6 +65,7 @@ For hundreds or thousands of affected requests, don't do this one row at a time 
 - **Does not modify the original log.** The original request and response are preserved exactly as captured. The replay result appears as a separate response alongside the original.
 - **Does not retry automatically.** Replay is always manual and intentional — getrequest will never re-fire a request without you clicking the button. (Async API's own automatic retries are a separate thing — see [Sync vs. Async endpoints](/guides/async-api).)
 - **Does not work on Static API endpoints.** There's no destination to send a Static API request to, so there's nothing to replay.
+- **Does not skip destination validation.** If the destination now resolves to a private, loopback, or link-local address — even if it didn't when the request was first captured — the replay fails immediately with `502 Destination not allowed`, independent of whatever caused the original failure. See [Limits, timeouts & error responses](/guides/reference#destination-validation-ssrf-protection).
 
 ---
 

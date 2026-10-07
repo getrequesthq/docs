@@ -34,6 +34,10 @@ description: Common questions about getrequest.
     For Async API, the enforced cap is **200 KiB**, but that check measures your original (decoded) file size, not what it becomes once base64-encoded for the delivery queue — base64 inflates size by about a third. For a **binary** payload specifically, stay under roughly **180 KiB** to leave safe margin; right at 200 KiB, the request can be silently dropped after already returning `202` to the caller. See [Limits, timeouts & error responses](/guides/reference) for exactly why. Text/JSON payloads aren't affected by this — they aren't re-encoded, so the full 200 KiB is genuinely safe for those.
   </Accordion>
 
+  <Accordion title="Can my destination point at an internal or private address?">
+    No. A Destination URL can't resolve to a private, loopback, or link-local address — including cloud metadata endpoints like `169.254.169.254`. This is enforced both when you save the endpoint and on every live request (since a public hostname can be repointed to a private address via DNS at any time), and it applies to Replay too. See [Limits, timeouts & error responses](/guides/reference#destination-validation-ssrf-protection) for the exact blocked ranges.
+  </Accordion>
+
   <Accordion title="What's the difference between Sync API and Async API?">
     Sync API proxies inline and returns your destination's exact response to the caller. Async API acknowledges the caller immediately (`202`) and delivers to your destination in the background, retrying automatically up to 6 times over about 36 minutes if it fails. Async API is the better fit for webhooks and anything else where the caller doesn't need to wait on — or see — your actual response. Neither is plan-gated. See [Sync vs. Async endpoints](/guides/async-api).
   </Accordion>

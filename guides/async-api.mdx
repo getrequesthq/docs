@@ -60,7 +60,7 @@ After responding to the caller, getrequest queues the actual call to your destin
 
 That's up to **6 attempts over roughly 36 minutes** before getrequest gives up and marks the delivery **failed**. Every attempt re-reads your endpoint's current destination and auth configuration — if you fix your handler or rotate a credential mid-retry, the next attempt uses the update, not a stale snapshot from the first attempt.
 
-There's one way out of that schedule besides success or exhaustion: if you delete the endpoint — or its whole project — while a delivery is still retrying, getrequest detects that immediately and stops rather than continuing to retry against something that no longer exists. That delivery is marked `failed` with `error: "Endpoint deleted"`.
+There are two ways out of that schedule besides success or exhaustion. If you delete the endpoint — or its whole project — while a delivery is still retrying, getrequest detects that immediately and stops rather than continuing to retry against something that no longer exists; that delivery is marked `failed` with `error: "Endpoint deleted"`. And if your destination resolves to a private, loopback, or link-local address, getrequest blocks the attempt before it ever leaves — since that would fail identically on every retry, it isn't retried either, and the delivery is marked `failed` immediately (`response_status: 502`). See [Limits, timeouts & error responses](/guides/reference#destination-validation-ssrf-protection) for the full list of blocked ranges.
 
 ### Delivery status
 
@@ -74,7 +74,7 @@ From there, `delivery_status` updates as further attempts happen:
 |--------|---------|
 | `retrying` | The first (or a later) attempt failed; another is scheduled |
 | `delivered` | Your destination returned a `2xx` |
-| `failed` | All 6 attempts were exhausted without a `2xx` — or the endpoint was deleted mid-retry |
+| `failed` | All 6 attempts were exhausted without a `2xx` — or the endpoint was deleted mid-retry, or the destination resolved to a private/internal address |
 
 Open the log entry to see every individual attempt — status returned, duration, and any error — the same per-attempt history bulk and manual retries use (see [Bulk retry & recovering many requests](/guides/bulk-retry)). A `failed` delivery (from exhausted retries) is a normal candidate for a manual **Replay** once you've fixed whatever caused it — see [Recover from production failures](/guides/recover-failures).
 
